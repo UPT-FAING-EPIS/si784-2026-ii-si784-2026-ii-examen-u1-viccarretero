@@ -1,0 +1,1 @@
+Infraestructura aprovisionada automaticamente con Terraform y GitHub Actions.
