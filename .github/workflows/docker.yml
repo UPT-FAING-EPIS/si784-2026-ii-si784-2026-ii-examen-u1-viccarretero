@@ -1,0 +1,21 @@
+name: Docker Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Construir imagen Docker
+        run: docker build -t flightreservation-api:latest ./FlightReservation.Api
+
+      - name: Mostrar imagen creada
+        run: docker images flightreservation-api

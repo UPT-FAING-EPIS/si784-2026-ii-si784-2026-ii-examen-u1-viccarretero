@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Vuelos</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        header {
+            background: #123b66;
+            color: white;
+            padding: 22px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 25px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 22px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.10);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        input, button {
+            padding: 11px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #1769aa;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background: #0d4d82;
+        }
+
+        .danger {
+            background: #c62828;
+        }
+
+        .flight {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 12px;
+            border-radius: 8px;
+        }
+
+        .flight h3 {
+            margin-top: 0;
+        }
+
+        .price {
+            color: #1769aa;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #1b5e20;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #b71c1c;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>✈ Sistema de Reserva de Vuelos</h1>
+    <p>Busca, reserva y administra tus vuelos</p>
+</header>
+
+<main>
+
+    <section class="card">
+
+        <h2>Buscar vuelos</h2>
+
+        <div class="form-grid">
+
+            <input id="origin"
+                   placeholder="Origen"
+                   maxlength="50">
+
+            <input id="destination"
+                   placeholder="Destino"
+                   maxlength="50">
+
+            <input id="date"
+                   type="date">
+
+            <button onclick="buscarVuelos()">
+                Buscar
+            </button>
+
+        </div>
+
+        <div id="flights"></div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h2>Crear reserva</h2>
+
+        <div class="form-grid">
+
+            <input id="userId"
+                   placeholder="ID de usuario">
+
+            <input id="passengerName"
+                   placeholder="Nombre del pasajero">
+
+            <input id="flightId"
+                   type="number"
+                   min="1"
+                   placeholder="ID del vuelo">
+
+            <input id="seatNumber"
+                   placeholder="Asiento (ej. 12A)">
+
+            <button onclick="crearReserva()">
+                Reservar
+            </button>
+
+        </div>
+
+        <div id="reservationMessage"></div>
+
+    </section>
+
+
+    <section class="card">
+
+        <h2>Mis reservas</h2>
+
+        <div class="form-grid">
+
+            <input id="reservationUserId"
+                   placeholder="ID de usuario">
+
+            <button onclick="listarReservas()">
+                Consultar reservas
+            </button>
+
+        </div>
+
+        <div id="reservations"></div>
+
+    </section>
+
+</main>
+
+<script>
+
+async function buscarVuelos() {
+
+    const origin = document.getElementById("origin").value.trim();
+    const destination = document.getElementById("destination").value.trim();
+    const date = document.getElementById("date").value;
+
+    const params = new URLSearchParams();
+
+    if (origin)
+        params.append("origin", origin);
+
+    if (destination)
+        params.append("destination", destination);
+
+    if (date)
+        params.append("date", date);
+
+    try {
+
+        const response =
+            await fetch("/flights?" + params.toString());
+
+        if (!response.ok)
+            throw new Error("No se pudieron obtener los vuelos.");
+
+        const flights = await response.json();
+
+        mostrarVuelos(flights);
+
+    }
+    catch {
+
+        document.getElementById("flights").innerHTML =
+            '<div class="error">Error consultando vuelos.</div>';
+    }
+}
+
+
+function mostrarVuelos(flights) {
+
+    const container =
+        document.getElementById("flights");
+
+    container.innerHTML = "";
+
+    if (flights.length === 0) {
+
+        container.innerHTML =
+            '<p>No se encontraron vuelos.</p>';
+
+        return;
+    }
+
+    flights.forEach(flight => {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "flight";
+
+        const fecha =
+            new Date(flight.departureDate)
+            .toLocaleString();
+
+        div.innerHTML = `
+            <h3>
+                ${flight.origin}
+                →
+                ${flight.destination}
+            </h3>
+
+            <p>
+                <strong>Aerolínea:</strong>
+                ${flight.airline}
+            </p>
+
+            <p>
+                <strong>Salida:</strong>
+                ${fecha}
+            </p>
+
+            <p>
+                <strong>Duración:</strong>
+                ${flight.duration}
+            </p>
+
+            <p>
+                <strong>Asientos disponibles:</strong>
+                ${flight.availableSeats}
+            </p>
+
+            <p class="price">
+                S/ ${flight.price}
+            </p>
+
+            <button
+                onclick="seleccionarVuelo(${flight.id})">
+
+                Reservar vuelo ${flight.id}
+
+            </button>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+
+function seleccionarVuelo(id) {
+
+    document.getElementById("flightId").value = id;
+
+    document.getElementById("passengerName").focus();
+}
+
+
+async function crearReserva() {
+
+    const userId =
+        document.getElementById("userId").value.trim();
+
+    const passengerName =
+        document.getElementById("passengerName").value.trim();
+
+    const flightId =
+        Number(document.getElementById("flightId").value);
+
+    const seatNumber =
+        document.getElementById("seatNumber").value.trim();
+
+
+    const message =
+        document.getElementById("reservationMessage");
+
+
+    if (!userId || !passengerName || !flightId) {
+
+        message.innerHTML =
+            '<div class="error">Complete los campos obligatorios.</div>';
+
+        return;
+    }
+
+
+    const data = {
+
+        userId,
+        passengerName,
+        flightId,
+        seatNumber
+    };
+
+
+    try {
+
+        const response =
+            await fetch("/reservations", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(data)
+            });
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            message.innerHTML =
+                `<div class="error">
+                    ${result.message || "Error creando reserva."}
+                </div>`;
+
+            return;
+        }
+
+
+        message.innerHTML =
+            `<div class="success">
+                Reserva creada correctamente.
+                ID: ${result.id}
+            </div>`;
+
+
+        buscarVuelos();
+
+    }
+    catch {
+
+        message.innerHTML =
+            '<div class="error">Error de conexión.</div>';
+    }
+}
+
+
+async function listarReservas() {
+
+    const userId =
+        document.getElementById("reservationUserId")
+        .value.trim();
+
+
+    if (!userId) {
+
+        alert("Ingrese un ID de usuario.");
+
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/reservations/" +
+                encodeURIComponent(userId)
+            );
+
+
+        const reservations =
+            await response.json();
+
+
+        const container =
+            document.getElementById("reservations");
+
+
+        container.innerHTML = "";
+
+
+        if (reservations.length === 0) {
+
+            container.innerHTML =
+                "<p>No existen reservas.</p>";
+
+            return;
+        }
+
+
+        reservations.forEach(r => {
+
+            const div =
+                document.createElement("div");
+
+            div.className = "flight";
+
+
+            div.innerHTML = `
+
+                <h3>
+                    Reserva #${r.id}
+                </h3>
+
+                <p>
+                    <strong>Pasajero:</strong>
+                    ${r.passengerName}
+                </p>
+
+                <p>
+                    <strong>Vuelo:</strong>
+                    ${r.flight?.origin || ""}
+                    →
+                    ${r.flight?.destination || ""}
+                </p>
+
+                <p>
+                    <strong>Asiento:</strong>
+                    ${r.seatNumber || "Sin asignar"}
+                </p>
+
+                <p>
+                    <strong>Estado:</strong>
+                    ${r.status}
+                </p>
+
+                <button
+                    class="danger"
+                    onclick="cancelarReserva(${r.id})">
+
+                    Cancelar reserva
+
+                </button>
+            `;
+
+
+            container.appendChild(div);
+
+        });
+
+    }
+    catch {
+
+        document.getElementById("reservations")
+            .innerHTML =
+            '<div class="error">Error consultando reservas.</div>';
+    }
+}
+
+
+async function cancelarReserva(id) {
+
+    if (!confirm("¿Cancelar esta reserva?"))
+        return;
+
+
+    const response =
+        await fetch(
+            "/reservations/" + id,
+            {
+                method: "DELETE"
+            }
+        );
+
+
+    if (response.ok) {
+
+        alert("Reserva cancelada.");
+
+        listarReservas();
+        buscarVuelos();
+
+    }
+    else {
+
+        alert("No se pudo cancelar la reserva.");
+    }
+}
+
+
+buscarVuelos();
+
+</script>
+
+</body>
+</html>
