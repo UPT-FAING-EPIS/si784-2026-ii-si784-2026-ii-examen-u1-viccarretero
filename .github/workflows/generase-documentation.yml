@@ -1,0 +1,141 @@
+﻿name: Generate Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v6
+
+      - name: Generar documentacion
+        run: |
+          mkdir -p docs/generated
+
+          cat > docs/generated/diccionario-datos.md <<'EOF'
+          # Diccionario de Datos - FlightReservation
+
+          ## Flights
+          | Campo | Tipo | Descripcion |
+          |---|---|---|
+          | Id | int | Identificador del vuelo |
+          | Origin | string | Ciudad de origen |
+          | Destination | string | Ciudad de destino |
+          | DepartureDate | DateTime | Fecha de salida |
+          | Airline | string | Aerolinea |
+          | Duration | string | Duracion |
+          | Price | decimal | Precio |
+          | AvailableSeats | int | Asientos disponibles |
+
+          ## Reservations
+          | Campo | Tipo | Descripcion |
+          |---|---|---|
+          | Id | int | Identificador de reserva |
+          | UserId | string | Usuario |
+          | PassengerName | string | Pasajero |
+          | SeatNumber | string | Numero de asiento |
+          | Status | string | Estado |
+          | CreatedAt | DateTime | Fecha de creacion |
+          | FlightId | int | Vuelo relacionado |
+          EOF
+
+          cat > docs/generated/diagrama-er.md <<'EOF'
+          # Diagrama Entidad Relacion
+
+          ```mermaid
+          erDiagram
+              FLIGHT ||--o{ RESERVATION : tiene
+              FLIGHT {
+                  int Id PK
+                  string Origin
+                  string Destination
+                  datetime DepartureDate
+                  string Airline
+                  string Duration
+                  decimal Price
+                  int AvailableSeats
+              }
+              RESERVATION {
+                  int Id PK
+                  string UserId
+                  string PassengerName
+                  string SeatNumber
+                  string Status
+                  datetime CreatedAt
+                  int FlightId FK
+              }
+          ```
+          EOF
+
+          cat > docs/generated/diagrama-clases.md <<'EOF'
+          # Diagrama de Clases
+
+          ```mermaid
+          classDiagram
+              class Flight {
+                  +int Id
+                  +string Origin
+                  +string Destination
+                  +DateTime DepartureDate
+                  +string Airline
+                  +string Duration
+                  +decimal Price
+                  +int AvailableSeats
+              }
+
+              class Reservation {
+                  +int Id
+                  +string UserId
+                  +string PassengerName
+                  +string SeatNumber
+                  +string Status
+                  +DateTime CreatedAt
+                  +int FlightId
+              }
+
+              Flight "1" --> "*" Reservation
+          ```
+          EOF
+
+          cat > docs/generated/diagrama-componentes.md <<'EOF'
+          # Diagrama de Componentes
+
+          ```mermaid
+          flowchart LR
+              U[Usuario] --> F[Frontend HTML CSS JavaScript]
+              F --> API[ASP.NET Core Web API]
+              API --> EF[Entity Framework Core]
+              EF --> DB[(SQLite)]
+          ```
+          EOF
+
+          cat > docs/generated/diagrama-despliegue.md <<'EOF'
+          # Diagrama de Despliegue
+
+          ```mermaid
+          flowchart TB
+              USER[Cliente Web]
+              PAGES[GitHub Pages]
+              API[Contenedor ASP.NET Core]
+              DB[(SQLite)]
+              ACTIONS[GitHub Actions]
+              SONAR[SonarQube Cloud]
+
+              USER --> PAGES
+              PAGES --> API
+              API --> DB
+              ACTIONS --> PAGES
+              ACTIONS --> SONAR
+          ```
+          EOF
+
+      - name: Subir documentacion generada
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentacion-flightreservation
+          path: docs/generated

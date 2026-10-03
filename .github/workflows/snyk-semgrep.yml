@@ -1,0 +1,72 @@
+﻿name: Snyk Semgrep Security
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v6
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Instalar Snyk
+        uses: snyk/actions/setup@master
+
+      - name: Snyk dependencias
+        if: env.SNYK_TOKEN != ''
+        working-directory: FlightReservation.Api
+        run: snyk test --file=FlightReservation.Api.csproj --sarif-file-output=../snyk-code.sarif || true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar Semgrep
+        run: python -m pip install semgrep
+
+      - name: Analisis Semgrep
+        run: semgrep scan --config auto FlightReservation.Api --json --output semgrep-report.json || true
+
+      - name: Construir imagen Docker
+        run: docker build -t flightreservation-api:latest ./FlightReservation.Api
+
+      - name: Snyk imagen Docker
+        if: env.SNYK_TOKEN != ''
+        run: snyk container test flightreservation-api:latest --file=FlightReservation.Api/Dockerfile --sarif-file-output=snyk-container.sarif || true
+
+      - name: Trivy imagen Docker
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: 'flightreservation-api:latest'
+          format: 'json'
+          output: 'trivy-image-report.json'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Guardar reportes
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-seguridad
+          path: |
+            semgrep-report.json
+            trivy-image-report.json
+            snyk-code.sarif
+            snyk-container.sarif
+          if-no-files-found: ignore
